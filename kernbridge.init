@@ -1,0 +1,61 @@
+#!/bin/sh /etc/rc.common
+# Kernbridge — OpenWrt Init Script
+#
+# How to install:
+#   scp kernbridge.init root@192.168.1.1:/etc/init.d/kernbridge
+#   ssh root@192.168.1.1 "chmod +x /etc/init.d/kernbridge"
+#   ssh root@192.168.1.1 "/etc/init.d/kernbridge enable"
+#   ssh root@192.168.1.1 "/etc/init.d/kernbridge start"
+#
+# How to manage manually after installation:
+#   /etc/init.d/kernbridge start    → start
+#   /etc/init.d/kernbridge stop     → stop
+#   /etc/init.d/kernbridge restart  → restart
+#   /etc/init.d/kernbridge enable   → start automatically on boot
+#   /etc/init.d/kernbridge disable  → do not start on boot
+
+# START: 95 = starts AFTER uhttpd (90)
+# Kernbridge needs uhttpd running first — it forwards requests there.
+START=95
+
+# STOP: 10 = stops BEFORE uhttpd during shutdown
+STOP=10
+
+BINARY="/usr/bin/kernbridge"
+LOG="/var/log/kernbridge.log"
+PIDFILE="/var/run/kernbridge.pid"
+
+start() {
+    echo "Starting Kernbridge..."
+
+    [ -f "$BINARY" ] || {
+        echo "ERROR: Binary not found at ${BINARY}"
+        echo "       Copy the compiled binary to the router first:"
+        echo "       scp target/.../kernbridge root@router:${BINARY}"
+        return 1
+    }
+
+    RUST_LOG=info "$BINARY" >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+
+    echo "Kernbridge started (PID: $(cat $PIDFILE))"
+    echo "Log: ${LOG}"
+}
+
+stop() {
+    echo "Stopping Kernbridge..."
+
+    if [ -f "$PIDFILE" ]; then
+        kill $(cat "$PIDFILE") 2>/dev/null
+        rm -f "$PIDFILE"
+        echo "Kernbridge stopped."
+    else
+        echo "Kernbridge was not running (no PID file found)."
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
