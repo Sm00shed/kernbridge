@@ -145,9 +145,9 @@ fn parse_field(line: &str) -> Result<Field, String> { // [17]
     let args = extract_args(line).ok_or("no args")?;
     if args.len() < 3 { return Err("too few args".into()); }
 
-    let tab       = args[0].trim_matches('"').to_string();
+    let tab       = args[0].trim_matches('"').trim_matches('\'').to_string();
     let type_str  = args[1].trim().to_string();
-    let name      = args[2].trim_matches('"').to_string();
+    let name      = args[2].trim_matches('"').trim_matches('\'').to_string();
     let label     = if args.len() > 3 { clean_translated(&args[3]) } else { String::new() };
 
     let field_type = match type_str.as_str() {
