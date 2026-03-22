@@ -58,6 +58,7 @@ struct Tab { // [5]
 #[derive(Debug)]
 struct ParseResult { // [6]
     package_name: String,
+    section_type: String,
     tabs:         Vec<Tab>,
     fields:       Vec<Field>,
     warnings:     Vec<String>,
@@ -122,6 +123,7 @@ fn parse_js(content: &str, filename: &str) -> ParseResult { // [7b]
 
     let mut result = ParseResult {
         package_name,
+        section_type: String::new(),
         tabs:     Vec::new(),
         fields:   Vec::new(),
         warnings: Vec::new(),
@@ -132,6 +134,18 @@ fn parse_js(content: &str, filename: &str) -> ParseResult { // [7b]
     let joined = join_multiline(content); // [8]
     for line in joined.lines() {
         let line = line.trim();
+
+        if line.contains("m.section(") || line.contains("= m.section(") { // [8b]
+            if let Some(args) = extract_args(line) {
+                if args.len() >= 2 {
+                    let section_type = args[0].trim().to_string();
+                    if section_type.contains("TypedSection") && args.len() >= 2 {
+                        result.section_type = args[1].trim_matches('"').trim_matches('\'').to_string();
+                    }
+                }
+            }
+            continue;
+        }
 
         if line.starts_with("s.tab(") { // [9]
             if let Some(tab) = parse_tab(line) {
@@ -436,6 +450,8 @@ fn generate_rust(result: &ParseResult) -> String { // [30]
     let mut rs = String::new();
     let pkg = &result.package_name;
     let cap = capitalize(pkg);
+    let has_typed_section = !result.section_type.is_empty();
+    let section_type = &result.section_type;
 
     rs.push_str("use anyhow::Result;\n");
     rs.push_str("use askama::Template;\n\n");
@@ -467,30 +483,70 @@ fn generate_rust(result: &ParseResult) -> String { // [30]
     }
     rs.push_str("}\n\n");
 
-    rs.push_str(&format!("pub fn read_{}_config() -> {}Config {{\n    {}Config {{\n", pkg, cap, cap));
-    for field in &result.fields {
-        if !matches!(field.field_type, FieldType::Unknown(_)) {
-            rs.push_str(&format!(
-                "        {}: uci_get(\"{}.@{}[0].{}\", \"{}\"),\n",
-                field.name, pkg, pkg, field.name, field.default
-            ));
+    if has_typed_section {
+        rs.push_str(&format!(
+            "fn get_{}_section() -> String {{\n    std::process::Command::new(\"sh\")\n        .args([\"-c\", \"uci show {} | grep '={}' | head -1 | cut -d. -f2\"])\n        .output()\n        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())\n        .unwrap_or_else(|_| \"@{}[0]\".to_string())\n}}\n\n",
+            pkg, pkg, section_type, pkg
+        ));
+    }
+
+    rs.push_str(&format!("pub fn read_{}_config() -> {}Config {{\n", pkg, cap));
+    if has_typed_section {
+        rs.push_str(&format!("    let section = get_{}_section();\n", pkg));
+        rs.push_str(&format!("    {}Config {{\n", cap));
+        for field in &result.fields {
+            if !matches!(field.field_type, FieldType::Unknown(_)) {
+                rs.push_str(&format!(
+                    "        {}: uci_get(&format!(\"{}.{{}}.{}\", section), \"{}\"),\n",
+                    field.name, pkg, field.name, field.default
+                ));
+            }
+        }
+    } else {
+        rs.push_str(&format!("    {}Config {{\n", cap));
+        for field in &result.fields {
+            if !matches!(field.field_type, FieldType::Unknown(_)) {
+                rs.push_str(&format!(
+                    "        {}: uci_get(\"{}.@{}[0].{}\", \"{}\"),\n",
+                    field.name, pkg, pkg, field.name, field.default
+                ));
+            }
         }
     }
     rs.push_str("    }\n}\n\n");
 
     rs.push_str(&format!("pub fn write_{}_config(form: &{}Form) -> Result<()> {{\n", pkg, cap));
-    for field in &result.fields {
-        if !matches!(field.field_type, FieldType::Unknown(_)) {
-            if matches!(field.field_type, FieldType::Flag) {
-                rs.push_str(&format!(
-                    "    uci_set(\"{}.@{}[0].{}\", if form.{}.is_some() {{ \"1\" }} else {{ \"0\" }})?;\n",
-                    pkg, pkg, field.name, field.name
-                ));
-            } else {
-                rs.push_str(&format!(
-                    "    uci_set(\"{}.@{}[0].{}\", &form.{})?;\n",
-                    pkg, pkg, field.name, field.name
-                ));
+    if has_typed_section {
+        rs.push_str(&format!("    let section = get_{}_section();\n", pkg));
+        for field in &result.fields {
+            if !matches!(field.field_type, FieldType::Unknown(_)) {
+                if matches!(field.field_type, FieldType::Flag) {
+                    rs.push_str(&format!(
+                        "    uci_set(&format!(\"{{}}.{{}}.{}\", \"{}\", section), if form.{}.is_some() {{ \"1\" }} else {{ \"0\" }})?;\n",
+                        field.name, pkg, field.name
+                    ));
+                } else {
+                    rs.push_str(&format!(
+                        "    uci_set(&format!(\"{{}}.{{}}.{}\", \"{}\", section), &form.{})?;\n",
+                        field.name, pkg, field.name
+                    ));
+                }
+            }
+        }
+    } else {
+        for field in &result.fields {
+            if !matches!(field.field_type, FieldType::Unknown(_)) {
+                if matches!(field.field_type, FieldType::Flag) {
+                    rs.push_str(&format!(
+                        "    uci_set(\"{}.@{}[0].{}\", if form.{}.is_some() {{ \"1\" }} else {{ \"0\" }})?;\n",
+                        pkg, pkg, field.name, field.name
+                    ));
+                } else {
+                    rs.push_str(&format!(
+                        "    uci_set(\"{}.@{}[0].{}\", &form.{})?;\n",
+                        pkg, pkg, field.name, field.name
+                    ));
+                }
             }
         }
     }

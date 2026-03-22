@@ -71,66 +71,76 @@ pub struct SqmForm {
     pub linklayer_adaptation_mechanism: String,
 }
 
+fn get_sqm_section() -> String {
+    std::process::Command::new("sh")
+        .args(["-c", "uci show sqm | grep '=queue' | head -1 | cut -d. -f2"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "@sqm[0]".to_string())
+}
+
 pub fn read_sqm_config() -> SqmConfig {
+    let section = get_sqm_section();
     SqmConfig {
-        enabled: uci_get("sqm.@sqm[0].enabled", ""),
-        download: uci_get("sqm.@sqm[0].download", ""),
-        upload: uci_get("sqm.@sqm[0].upload", ""),
-        debug_logging: uci_get("sqm.@sqm[0].debug_logging", ""),
-        verbosity: uci_get("sqm.@sqm[0].verbosity", "5"),
-        qdisc: uci_get("sqm.@sqm[0].qdisc", "cake"),
-        script: uci_get("sqm.@sqm[0].script", "piece_of_cake.qos"),
-        qdisc_advanced: uci_get("sqm.@sqm[0].qdisc_advanced", "false"),
-        use_mq: uci_get("sqm.@sqm[0].use_mq", "false"),
-        squash_dscp: uci_get("sqm.@sqm[0].squash_dscp", "1"),
-        squash_ingress: uci_get("sqm.@sqm[0].squash_ingress", "1"),
-        ingress_ecn: uci_get("sqm.@sqm[0].ingress_ecn", "ECN"),
-        egress_ecn: uci_get("sqm.@sqm[0].egress_ecn", "NOECN"),
-        qdisc_really_really_advanced: uci_get("sqm.@sqm[0].qdisc_really_really_advanced", "false"),
-        ilimit: uci_get("sqm.@sqm[0].ilimit", ""),
-        elimit: uci_get("sqm.@sqm[0].elimit", ""),
-        itarget: uci_get("sqm.@sqm[0].itarget", ""),
-        etarget: uci_get("sqm.@sqm[0].etarget", ""),
-        iqdisc_opts: uci_get("sqm.@sqm[0].iqdisc_opts", ""),
-        eqdisc_opts: uci_get("sqm.@sqm[0].eqdisc_opts", ""),
-        linklayer: uci_get("sqm.@sqm[0].linklayer", "none"),
-        overhead: uci_get("sqm.@sqm[0].overhead", "0"),
-        linklayer_advanced: uci_get("sqm.@sqm[0].linklayer_advanced", ""),
-        tcMTU: uci_get("sqm.@sqm[0].tcMTU", "2047"),
-        tcTSIZE: uci_get("sqm.@sqm[0].tcTSIZE", "128"),
-        tcMPU: uci_get("sqm.@sqm[0].tcMPU", "0"),
-        linklayer_adaptation_mechanism: uci_get("sqm.@sqm[0].linklayer_adaptation_mechanism", "default"),
+        enabled: uci_get(&format!("sqm.{}.enabled", section), ""),
+        download: uci_get(&format!("sqm.{}.download", section), ""),
+        upload: uci_get(&format!("sqm.{}.upload", section), ""),
+        debug_logging: uci_get(&format!("sqm.{}.debug_logging", section), ""),
+        verbosity: uci_get(&format!("sqm.{}.verbosity", section), "5"),
+        qdisc: uci_get(&format!("sqm.{}.qdisc", section), "cake"),
+        script: uci_get(&format!("sqm.{}.script", section), "piece_of_cake.qos"),
+        qdisc_advanced: uci_get(&format!("sqm.{}.qdisc_advanced", section), "false"),
+        use_mq: uci_get(&format!("sqm.{}.use_mq", section), "false"),
+        squash_dscp: uci_get(&format!("sqm.{}.squash_dscp", section), "1"),
+        squash_ingress: uci_get(&format!("sqm.{}.squash_ingress", section), "1"),
+        ingress_ecn: uci_get(&format!("sqm.{}.ingress_ecn", section), "ECN"),
+        egress_ecn: uci_get(&format!("sqm.{}.egress_ecn", section), "NOECN"),
+        qdisc_really_really_advanced: uci_get(&format!("sqm.{}.qdisc_really_really_advanced", section), "false"),
+        ilimit: uci_get(&format!("sqm.{}.ilimit", section), ""),
+        elimit: uci_get(&format!("sqm.{}.elimit", section), ""),
+        itarget: uci_get(&format!("sqm.{}.itarget", section), ""),
+        etarget: uci_get(&format!("sqm.{}.etarget", section), ""),
+        iqdisc_opts: uci_get(&format!("sqm.{}.iqdisc_opts", section), ""),
+        eqdisc_opts: uci_get(&format!("sqm.{}.eqdisc_opts", section), ""),
+        linklayer: uci_get(&format!("sqm.{}.linklayer", section), "none"),
+        overhead: uci_get(&format!("sqm.{}.overhead", section), "0"),
+        linklayer_advanced: uci_get(&format!("sqm.{}.linklayer_advanced", section), ""),
+        tcMTU: uci_get(&format!("sqm.{}.tcMTU", section), "2047"),
+        tcTSIZE: uci_get(&format!("sqm.{}.tcTSIZE", section), "128"),
+        tcMPU: uci_get(&format!("sqm.{}.tcMPU", section), "0"),
+        linklayer_adaptation_mechanism: uci_get(&format!("sqm.{}.linklayer_adaptation_mechanism", section), "default"),
     }
 }
 
 pub fn write_sqm_config(form: &SqmForm) -> Result<()> {
-    uci_set("sqm.@sqm[0].enabled", if form.enabled.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].download", &form.download)?;
-    uci_set("sqm.@sqm[0].upload", &form.upload)?;
-    uci_set("sqm.@sqm[0].debug_logging", if form.debug_logging.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].verbosity", &form.verbosity)?;
-    uci_set("sqm.@sqm[0].qdisc", &form.qdisc)?;
-    uci_set("sqm.@sqm[0].script", &form.script)?;
-    uci_set("sqm.@sqm[0].qdisc_advanced", if form.qdisc_advanced.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].use_mq", if form.use_mq.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].squash_dscp", &form.squash_dscp)?;
-    uci_set("sqm.@sqm[0].squash_ingress", &form.squash_ingress)?;
-    uci_set("sqm.@sqm[0].ingress_ecn", &form.ingress_ecn)?;
-    uci_set("sqm.@sqm[0].egress_ecn", &form.egress_ecn)?;
-    uci_set("sqm.@sqm[0].qdisc_really_really_advanced", if form.qdisc_really_really_advanced.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].ilimit", &form.ilimit)?;
-    uci_set("sqm.@sqm[0].elimit", &form.elimit)?;
-    uci_set("sqm.@sqm[0].itarget", &form.itarget)?;
-    uci_set("sqm.@sqm[0].etarget", &form.etarget)?;
-    uci_set("sqm.@sqm[0].iqdisc_opts", &form.iqdisc_opts)?;
-    uci_set("sqm.@sqm[0].eqdisc_opts", &form.eqdisc_opts)?;
-    uci_set("sqm.@sqm[0].linklayer", &form.linklayer)?;
-    uci_set("sqm.@sqm[0].overhead", &form.overhead)?;
-    uci_set("sqm.@sqm[0].linklayer_advanced", if form.linklayer_advanced.is_some() { "1" } else { "0" })?;
-    uci_set("sqm.@sqm[0].tcMTU", &form.tcMTU)?;
-    uci_set("sqm.@sqm[0].tcTSIZE", &form.tcTSIZE)?;
-    uci_set("sqm.@sqm[0].tcMPU", &form.tcMPU)?;
-    uci_set("sqm.@sqm[0].linklayer_adaptation_mechanism", &form.linklayer_adaptation_mechanism)?;
+    let section = get_sqm_section();
+    uci_set(&format!("{}.{}.enabled", "sqm", section), if form.enabled.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.download", "sqm", section), &form.download)?;
+    uci_set(&format!("{}.{}.upload", "sqm", section), &form.upload)?;
+    uci_set(&format!("{}.{}.debug_logging", "sqm", section), if form.debug_logging.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.verbosity", "sqm", section), &form.verbosity)?;
+    uci_set(&format!("{}.{}.qdisc", "sqm", section), &form.qdisc)?;
+    uci_set(&format!("{}.{}.script", "sqm", section), &form.script)?;
+    uci_set(&format!("{}.{}.qdisc_advanced", "sqm", section), if form.qdisc_advanced.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.use_mq", "sqm", section), if form.use_mq.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.squash_dscp", "sqm", section), &form.squash_dscp)?;
+    uci_set(&format!("{}.{}.squash_ingress", "sqm", section), &form.squash_ingress)?;
+    uci_set(&format!("{}.{}.ingress_ecn", "sqm", section), &form.ingress_ecn)?;
+    uci_set(&format!("{}.{}.egress_ecn", "sqm", section), &form.egress_ecn)?;
+    uci_set(&format!("{}.{}.qdisc_really_really_advanced", "sqm", section), if form.qdisc_really_really_advanced.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.ilimit", "sqm", section), &form.ilimit)?;
+    uci_set(&format!("{}.{}.elimit", "sqm", section), &form.elimit)?;
+    uci_set(&format!("{}.{}.itarget", "sqm", section), &form.itarget)?;
+    uci_set(&format!("{}.{}.etarget", "sqm", section), &form.etarget)?;
+    uci_set(&format!("{}.{}.iqdisc_opts", "sqm", section), &form.iqdisc_opts)?;
+    uci_set(&format!("{}.{}.eqdisc_opts", "sqm", section), &form.eqdisc_opts)?;
+    uci_set(&format!("{}.{}.linklayer", "sqm", section), &form.linklayer)?;
+    uci_set(&format!("{}.{}.overhead", "sqm", section), &form.overhead)?;
+    uci_set(&format!("{}.{}.linklayer_advanced", "sqm", section), if form.linklayer_advanced.is_some() { "1" } else { "0" })?;
+    uci_set(&format!("{}.{}.tcMTU", "sqm", section), &form.tcMTU)?;
+    uci_set(&format!("{}.{}.tcTSIZE", "sqm", section), &form.tcTSIZE)?;
+    uci_set(&format!("{}.{}.tcMPU", "sqm", section), &form.tcMPU)?;
+    uci_set(&format!("{}.{}.linklayer_adaptation_mechanism", "sqm", section), &form.linklayer_adaptation_mechanism)?;
 
     // TODO: service restart for sqm
     std::process::Command::new("uci").args(["commit", "sqm"]).status()?;
