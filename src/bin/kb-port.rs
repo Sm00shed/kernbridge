@@ -443,6 +443,7 @@ fn generate_rust(result: &ParseResult) -> String { // [30]
     rs.push_str(&format!("#[derive(Template)]\n#[template(path = \"{}/index.html\")]\n", pkg));
     rs.push_str(&format!("pub struct {}Template {{\n    pub config: {}Config,\n}}\n\n", cap, cap));
 
+    rs.push_str("#[allow(non_snake_case)]\n");
     rs.push_str("#[derive(serde::Serialize, serde::Deserialize, Debug)]\n");
     rs.push_str(&format!("pub struct {}Config {{\n", cap));
     for field in &result.fields {
@@ -452,6 +453,7 @@ fn generate_rust(result: &ParseResult) -> String { // [30]
     }
     rs.push_str("}\n\n");
 
+    rs.push_str("#[allow(non_snake_case)]\n");
     rs.push_str("#[derive(serde::Deserialize, Debug)]\n");
     rs.push_str(&format!("pub struct {}Form {{\n", cap));
     for field in &result.fields {

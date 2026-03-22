@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>sqm - LuCI</title>
+  <link rel="stylesheet" href="/luci-static/bootstrap/cascade.css">
+</head>
+<body class="logged-in">
+
+<div id="maincontent" class="container-fluid">
+  <div id="content">
+    <form class="cbi-map" method="POST" action="/cgi-bin/luci/admin/network/sqm">
+
+      <ul class="nav nav-tabs">
+        <li class="active"><a href="#tab_basic" data-toggle="tab">Basic Settings</a></li>
+        <li><a href="#tab_qdisc" data-toggle="tab">Queue Discipline</a></li>
+        <li><a href="#tab_linklayer" data-toggle="tab">Link Layer Adaptation</a></li>
+      </ul>
+
+      <div class="tab-content">
+
+        <div class="tab-pane active" id="tab_basic">
+          <div class="cbi-section">
+            <div class="cbi-section-node">
+
+              <div class="cbi-value" id="row_enabled">
+                <label class="cbi-value-title">Enable this SQM instance.</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="enabled" value="1" {% if config.enabled == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_interface">
+                <label class="cbi-value-title">Interface name</label>
+                <div class="cbi-value-field">
+                  <!-- TODO: unknown type widgets.DeviceSelect for interface -->
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_download">
+                <label class="cbi-value-title">Download speed (ingress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="download" value="{{ config.download }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_upload">
+                <label class="cbi-value-title">Upload speed (egress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="upload" value="{{ config.upload }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_debug_logging">
+                <label class="cbi-value-title">Enable debug logging</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="debug_logging" value="1" {% if config.debug_logging == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_verbosity">
+                <label class="cbi-value-title">Log verbosity</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="verbosity">
+                    <option value="0" {% if config.verbosity == "0" %}selected{% endif %}>silent</option>
+                    <option value="1" {% if config.verbosity == "1" %}selected{% endif %}>error</option>
+                    <option value="2" {% if config.verbosity == "2" %}selected{% endif %}>warning</option>
+                    <option value="5" {% if config.verbosity == "5" %}selected{% endif %}>info ("+_("default")+")</option>
+                    <option value="8" {% if config.verbosity == "8" %}selected{% endif %}>debug</option>
+                    <option value="10" {% if config.verbosity == "10" %}selected{% endif %}>trace</option>
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab_qdisc">
+          <div class="cbi-section">
+            <div class="cbi-section-node">
+
+              <div class="cbi-value" id="row_qdisc">
+                <label class="cbi-value-title">Queueing discipline</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="qdisc">
+                    <option value="qdiscs[i].name" {% if config.qdisc == "qdiscs[i].name" %}selected{% endif %}>qdiscs[i].name</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_script">
+                <label class="cbi-value-title">Queue setup script</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="script">
+                    <option value="scripts[i][0]" {% if config.script == "scripts[i][0]" %}selected{% endif %}>scripts[i][0]</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_qdisc_advanced">
+                <label class="cbi-value-title">Advanced Configuration</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="qdisc_advanced" value="1" {% if config.qdisc_advanced == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_use_mq">
+                <label class="cbi-value-title">Enable multi-queue config</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="use_mq" value="1" {% if config.use_mq == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_squash_dscp">
+                <label class="cbi-value-title">Squash DSCP (ingress)</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="squash_dscp">
+                    <option value="1" {% if config.squash_dscp == "1" %}selected{% endif %}>SQUASH</option>
+                    <option value="0" {% if config.squash_dscp == "0" %}selected{% endif %}>DO NOT SQUASH</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_squash_ingress">
+                <label class="cbi-value-title">Ignore DSCP (ingress)</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="squash_ingress">
+                    <option value="1" {% if config.squash_ingress == "1" %}selected{% endif %}>Ignore</option>
+                    <option value="0" {% if config.squash_ingress == "0" %}selected{% endif %}>Allow</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_ingress_ecn">
+                <label class="cbi-value-title">ECN (ingress)</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="ingress_ecn">
+                    <option value="ECN" {% if config.ingress_ecn == "ECN" %}selected{% endif %}>ECN (" + _("default") + ")</option>
+                    <option value="NOECN" {% if config.ingress_ecn == "NOECN" %}selected{% endif %}>NOECN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_egress_ecn">
+                <label class="cbi-value-title">ECN (egress)</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="egress_ecn">
+                    <option value="NOECN" {% if config.egress_ecn == "NOECN" %}selected{% endif %}>NOECN (" + _("default") + ")</option>
+                    <option value="ECN" {% if config.egress_ecn == "ECN" %}selected{% endif %}>ECN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_qdisc_really_really_advanced">
+                <label class="cbi-value-title">Dangerous Configuration</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="qdisc_really_really_advanced" value="1" {% if config.qdisc_really_really_advanced == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_ilimit">
+                <label class="cbi-value-title">Hard queue limit (ingress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="ilimit" value="{{ config.ilimit }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_elimit">
+                <label class="cbi-value-title">Hard queue limit (egress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="elimit" value="{{ config.elimit }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_itarget">
+                <label class="cbi-value-title">Latency target (ingress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="text" name="itarget" value="{{ config.itarget }}">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_etarget">
+                <label class="cbi-value-title">Latency target (egress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="text" name="etarget" value="{{ config.etarget }}">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_iqdisc_opts">
+                <label class="cbi-value-title">Qdisc options (ingress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="text" name="iqdisc_opts" value="{{ config.iqdisc_opts }}">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_eqdisc_opts">
+                <label class="cbi-value-title">Qdisc options (egress)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="text" name="eqdisc_opts" value="{{ config.eqdisc_opts }}">
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab_linklayer">
+          <div class="cbi-section">
+            <div class="cbi-section-node">
+
+              <div class="cbi-value" id="row_linklayer">
+                <label class="cbi-value-title">Link layer</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="linklayer">
+                    <option value="none" {% if config.linklayer == "none" %}selected{% endif %}>none (" + _("default") + ")</option>
+                    <option value="ethernet" {% if config.linklayer == "ethernet" %}selected{% endif %}>Ethernet with overhead: select for e.g. VDSL2.</option>
+                    <option value="atm" {% if config.linklayer == "atm" %}selected{% endif %}>ATM: select for e.g. ADSL1</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_overhead">
+                <label class="cbi-value-title">Per Packet Overhead (bytes)</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="overhead" value="{{ config.overhead }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_linklayer_advanced">
+                <label class="cbi-value-title">Advanced Linklayer Options</label>
+                <div class="cbi-value-field">
+                  <input type="checkbox" name="linklayer_advanced" value="1" {% if config.linklayer_advanced == "1" %}checked{% endif %}>
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_tcMTU">
+                <label class="cbi-value-title">Maximum packet size</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="tcMTU" value="{{ config.tcMTU }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_tcTSIZE">
+                <label class="cbi-value-title">Rate table size</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="tcTSIZE" value="{{ config.tcTSIZE }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_tcMPU">
+                <label class="cbi-value-title">Minimum packet size</label>
+                <div class="cbi-value-field">
+                  <input class="cbi-input-text" type="number" name="tcMPU" value="{{ config.tcMPU }}" min="0">
+                </div>
+              </div>
+
+              <div class="cbi-value" id="row_linklayer_adaptation_mechanism">
+                <label class="cbi-value-title">Linklayer adaptation mechanism</label>
+                <div class="cbi-value-field">
+                  <select class="cbi-input-select" name="linklayer_adaptation_mechanism">
+                    <option value="default" {% if config.linklayer_adaptation_mechanism == "default" %}selected{% endif %}>default (" + _("default") + ")</option>
+                    <option value="cake" {% if config.linklayer_adaptation_mechanism == "cake" %}selected{% endif %}>cake</option>
+                    <option value="htb_private" {% if config.linklayer_adaptation_mechanism == "htb_private" %}selected{% endif %}>htb_private</option>
+                    <option value="tc_stab" {% if config.linklayer_adaptation_mechanism == "tc_stab" %}selected{% endif %}>tc_stab</option>
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="cbi-page-actions">
+        <input class="btn btn-primary" type="submit" value="Save &amp; Apply">
+        <a class="btn btn-default" href="/cgi-bin/luci/admin/network/sqm">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+function kb_toggle() {
+  var el = document.getElementById('row_use_mq');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_squash_dscp');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_squash_ingress');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_ingress_ecn');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_egress_ecn');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_qdisc_really_really_advanced');
+  var dep = document.querySelector('[name="qdisc_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_ilimit');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_elimit');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_itarget');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_etarget');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_iqdisc_opts');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_eqdisc_opts');
+  var dep = document.querySelector('[name="qdisc_really_really_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_overhead');
+  var dep = document.querySelector('[name="linklayer"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === 'ethernet' ? '' : 'none';
+  }
+  var el = document.getElementById('row_overhead');
+  var dep = document.querySelector('[name="linklayer"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === 'atm' ? '' : 'none';
+  }
+  var el = document.getElementById('row_linklayer_advanced');
+  var dep = document.querySelector('[name="linklayer"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === 'ethernet' ? '' : 'none';
+  }
+  var el = document.getElementById('row_linklayer_advanced');
+  var dep = document.querySelector('[name="linklayer"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === 'atm' ? '' : 'none';
+  }
+  var el = document.getElementById('row_tcMTU');
+  var dep = document.querySelector('[name="linklayer_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_tcTSIZE');
+  var dep = document.querySelector('[name="linklayer_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_tcMPU');
+  var dep = document.querySelector('[name="linklayer_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+  var el = document.getElementById('row_linklayer_adaptation_mechanism');
+  var dep = document.querySelector('[name="linklayer_advanced"]');
+  if (dep && el) {
+    var val = dep.type === 'checkbox' ? (dep.checked ? '1' : '0') : dep.value;
+    el.style.display = val === '1' ? '' : 'none';
+  }
+}
+document.querySelectorAll('input,select').forEach(function(el) { el.addEventListener('change', kb_toggle); });
+kb_toggle();
+</script>
+<script src="/luci-static/bootstrap/luci.js"></script>
+</body>
+</html>
