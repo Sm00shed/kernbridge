@@ -63,7 +63,57 @@ struct ParseResult { // [6]
     warnings:     Vec<String>,
 }
 
-fn parse_js(content: &str, filename: &str) -> ParseResult { // [7]
+fn join_multiline(content: &str) -> String { // [7]
+    let mut result = String::new();
+    let mut pending = String::new();
+    let mut depth = 0i32;
+    let mut in_field = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        if !in_field {
+            let is_field = trimmed.contains("s.taboption(") || trimmed.contains("s.option(");
+            if is_field {
+                in_field = true;
+                pending = trimmed.to_string();
+                for ch in trimmed.chars() {
+                    match ch { '(' => depth += 1, ')' => depth -= 1, _ => {} }
+                }
+                if depth <= 0 {
+                    result.push_str(&pending);
+                    result.push('\n');
+                    pending.clear();
+                    depth = 0;
+                    in_field = false;
+                }
+            } else {
+                result.push_str(trimmed);
+                result.push('\n');
+            }
+        } else {
+            pending.push(' ');
+            pending.push_str(trimmed);
+            for ch in trimmed.chars() {
+                match ch { '(' => depth += 1, ')' => depth -= 1, _ => {} }
+            }
+            if depth <= 0 {
+                result.push_str(&pending);
+                result.push('\n');
+                pending.clear();
+                depth = 0;
+                in_field = false;
+            }
+        }
+    }
+    if !pending.is_empty() {
+        result.push_str(&pending);
+        result.push('\n');
+    }
+    result
+}
+
+fn parse_js(content: &str, filename: &str) -> ParseResult { // [7b]
     let package_name = std::path::Path::new(filename)
         .file_stem()
         .unwrap_or_default()
@@ -79,28 +129,29 @@ fn parse_js(content: &str, filename: &str) -> ParseResult { // [7]
 
     let mut current_field: Option<Field> = None;
 
-    for line in content.lines() {
+    let joined = join_multiline(content); // [8]
+    for line in joined.lines() {
         let line = line.trim();
 
-        if line.starts_with("s.tab(") { // [8]
+        if line.starts_with("s.tab(") { // [9]
             if let Some(tab) = parse_tab(line) {
                 result.tabs.push(tab);
             }
             continue;
         }
 
-        if line.contains("s.taboption(") || line.contains("s.option(") { // [9]
+        if line.contains("s.taboption(") || line.contains("s.option(") { // [10]
             if let Some(existing) = current_field.take() {
                 result.fields.push(existing);
             }
             match parse_field(line) {
                 Ok(field) => {
-                    println!("  ✅ {:?} \"{}\"", field.field_type, field.name);
+                    println!("  ok {:?} \"{}\"", field.field_type, field.name);
                     current_field = Some(field);
                 }
                 Err(e) => {
-                    result.warnings.push(format!("⚠️  {}: {}", line, e));
-                    println!("  ⚠️  {}", line);
+                    result.warnings.push(format!("warn {}: {}", line, e));
+                    println!("  warn {}", line);
                 }
             }
             continue;
@@ -482,7 +533,7 @@ fn main() { // [32]
 
     println!("\nTabs: {}", result.tabs.len());
     for tab in &result.tabs {
-        println!("  {} → {}", tab.id, tab.label);
+        println!("  {} -> {}", tab.id, tab.label);
     }
     println!("Fields: {}", result.fields.len());
 
