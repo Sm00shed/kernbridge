@@ -283,8 +283,12 @@ fn extract_translated(line: &str) -> String { // [23]
 fn extract_string_value(line: &str) -> String { // [24]
     if let Some(pos) = line.find('=') {
         return line[pos+1..].trim()
-            .trim_matches('"').trim_matches('\'')
-            .trim_end_matches(';').to_string();
+            .trim_end_matches(';')
+            .trim_end_matches(',')
+            .trim()
+            .trim_matches('"')
+            .trim_matches('\'')
+            .to_string();
     }
     String::new()
 }
