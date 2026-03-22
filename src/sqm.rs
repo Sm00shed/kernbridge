@@ -72,10 +72,18 @@ pub struct SqmForm {
 }
 
 fn get_sqm_section() -> String {
-    std::process::Command::new("sh")
-        .args(["-c", "uci show sqm | grep '=queue' | head -1 | cut -d. -f2"])
+    std::process::Command::new("uci")
+        .args(["show", "sqm"])
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .find(|l| l.contains("=queue"))
+                .and_then(|l| l.split('.').nth(1))
+                .and_then(|l| l.split('=').next())
+                .unwrap_or("@sqm[0]")
+                .to_string()
+        })
         .unwrap_or_else(|_| "@sqm[0]".to_string())
 }
 

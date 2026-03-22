@@ -485,8 +485,8 @@ fn generate_rust(result: &ParseResult) -> String { // [30]
 
     if has_typed_section {
         rs.push_str(&format!(
-            "fn get_{}_section() -> String {{\n    std::process::Command::new(\"sh\")\n        .args([\"-c\", \"uci show {} | grep '={}' | head -1 | cut -d. -f2\"])\n        .output()\n        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())\n        .unwrap_or_else(|_| \"@{}[0]\".to_string())\n}}\n\n",
-            pkg, pkg, section_type, pkg
+            "fn get_{}_section() -> String {{\n    std::process::Command::new(\"uci\")\n        .args([\"show\", \"{}\"])\n        .output()\n        .map(|o| {{\n            String::from_utf8_lossy(&o.stdout)\n                .lines()\n                .find(|l| l.contains(\"={}\"))\n                .and_then(|l| l.split('.').nth(1))\n                .and_then(|l| l.split('=').next())\n                .unwrap_or(\"@{}[0]\")\n                .to_string()\n        }})\n        .unwrap_or_else(|_| \"@{}[0]\".to_string())\n}}\n\n",
+            pkg, pkg, section_type, pkg, pkg
         ));
     }
 
